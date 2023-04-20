@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import net.dv8tion.jda.api.requests.GatewayIntent;
 
 /**
  * Hello world!
@@ -19,6 +20,7 @@ public class App {
         log.info(token);
 
         JDA jda = JDABuilder.createDefault(token)
+                .enableIntents(GatewayIntent.GUILD_MEMBERS)
                 .addEventListeners(new VoteListener())
                 .build();
 
