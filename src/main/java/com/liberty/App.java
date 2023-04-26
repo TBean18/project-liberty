@@ -26,8 +26,8 @@ public class App {
 
         jda.updateCommands().addCommands(
                 Commands.slash("ping", "Calculates Ping of the bot"),
-                Commands.user("mute (vote)"))
-                .queue();
+                Commands.user(VoteListener.MUTE_COMMAND_STRING))
+                .complete();
 
     }
 }

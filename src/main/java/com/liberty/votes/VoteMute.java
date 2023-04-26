@@ -32,13 +32,18 @@ public class VoteMute extends Vote {
     @Override
     public String toString() {
         String ret = String.format("Vote to Mute: %s\nVotes Required = %d\nVotes for = %d\nVotes Against = %d",
-                target.getNickname(), this.getVotesRequired(), this.votesInFavor, this.votesAgainst);
+                target.getNickname(), this.getVotesRequired(), this.votesInFavor.size(), this.votesAgainst.size());
         return ret;
     }
 
-    public void execute() {
-        // TODO
-        return;
+    @Override
+    /**
+     * Execute for Mute Votes
+     */
+    protected void execute() {
+        boolean muteStatus = target.getVoiceState().isGuildMuted();
+        cleanUp();
+        target.mute(!muteStatus).queue();
     }
 
     public boolean isValidRequest() {

@@ -1,9 +1,13 @@
 package com.liberty.votes;
 
+import java.util.HashSet;
+
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.Channel;
 import net.dv8tion.jda.api.events.Event;
 import net.dv8tion.jda.api.events.interaction.command.GenericCommandInteractionEvent;
@@ -11,6 +15,7 @@ import net.dv8tion.jda.api.events.interaction.command.GenericContextInteractionE
 import net.dv8tion.jda.api.events.interaction.command.UserContextInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 
+@Slf4j
 public abstract class Vote {
     public static final String VOTE_INFAVOR_COMPONENTID = "yes";
     public static final String VOTE_AGAINST_COMPONENTID = "no";
@@ -25,7 +30,8 @@ public abstract class Vote {
      */
     int votesRequired;
 
-    int votesInFavor, votesAgainst;
+    HashSet<Member> votesInFavor = new HashSet<>();
+    HashSet<Member> votesAgainst = new HashSet<>();
 
     /**
      * Event which spawned the vote.
@@ -99,12 +105,12 @@ public abstract class Vote {
     }
 
     public boolean checkVoteCount() {
-        if (votesInFavor >= votesRequired) {
+        if (votesInFavor.size() >= votesRequired) {
 
             return true;
         }
 
-        if (votesAgainst >= votesRequired) {
+        if (votesAgainst.size() >= votesRequired) {
             // Delete the message
 
             return true;
@@ -114,35 +120,42 @@ public abstract class Vote {
     }
 
     public void registerVote(ButtonInteractionEvent e) {
+        Member member = e.getMember();
         if (e.getComponentId().equalsIgnoreCase(VOTE_INFAVOR_COMPONENTID)) {
-            this.votesInFavor++;
+            if (this.votesInFavor.contains(member)) {
+                this.votesInFavor.remove(member);
+            } else {
+                this.votesInFavor.add(member);
+            }
             if (checkVoteCount()) {
                 this.execute();
                 return;
             }
         }
         if (e.getComponentId().equalsIgnoreCase(VOTE_AGAINST_COMPONENTID)) {
-            this.votesAgainst++;
+            if (this.votesAgainst.contains(member)) {
+                this.votesAgainst.remove(member);
+            } else {
+                this.votesAgainst.add(member);
+            }
             if (checkVoteCount()) {
-                // delete the message
-                e.reply("Vote Concluded").queue();
-                message.delete().queue();
+                cleanUp();
                 return;
             }
         }
-        e.editMessage(toString());
+        e.editMessage(toString()).queue();
     }
 
-    private void execute() {
+    /**
+     * Delete Message
+     */
+    void cleanUp() {
+        message.reply("Vote Concluded").queue();
+        message.delete().queue();
     }
 
-    public boolean registerVoteInFavor() {
-        this.votesInFavor++;
-        return checkVoteCount();
+    protected void execute() {
+        log.error("Default vote execution invoked for {}", this.toString());
     }
 
-    public boolean registerVoteAgainst() {
-        this.votesAgainst++;
-        return checkVoteCount();
-    }
 }

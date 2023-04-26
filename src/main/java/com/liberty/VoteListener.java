@@ -4,6 +4,7 @@ import java.util.function.Consumer;
 
 import com.liberty.votes.Vote;
 import com.liberty.votes.VoteMute;
+import com.liberty.votes.VoteUnmute;
 
 import net.dv8tion.jda.api.events.interaction.command.UserContextInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
@@ -14,13 +15,22 @@ import net.dv8tion.jda.api.requests.restaction.interactions.ReplyCallbackAction;
 
 public class VoteListener extends ListenerAdapter {
 
+    public static final String MUTE_COMMAND_STRING = "toggle mute";
+
     @Override
     public void onUserContextInteraction(UserContextInteractionEvent event) {
-        if (event.getName().equalsIgnoreCase("mute (vote)")) {
-            VoteMute vm = new VoteMute(event);
+        if (event.getName().equalsIgnoreCase(MUTE_COMMAND_STRING)) {
+            VoteMute vm;
+            // Check if its Mute or unmute
+            if (event.getTargetMember().getVoiceState().isGuildMuted()) {
+                vm = new VoteUnmute(event);
+            } else {
+                vm = new VoteMute(event);
+            }
+
             if (vm.isValidRequest()) {
                 // Reply to the interaction
-                event.deferReply(true).queue((t) -> {
+                event.deferReply().queue((t) -> {
                     t.sendMessage(vm.toString()).addActionRow(
                             Button.primary(Vote.VOTE_INFAVOR_COMPONENTID, "Vote in Favor"),
                             Button.secondary(Vote.VOTE_AGAINST_COMPONENTID, "Vote against"))
