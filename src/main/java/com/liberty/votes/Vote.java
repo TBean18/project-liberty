@@ -154,8 +154,6 @@ public abstract class Vote {
         message.delete().queue();
     }
 
-    protected void execute() {
-        log.error("Default vote execution invoked for {}", this.toString());
-    }
+    abstract protected void execute();
 
 }
