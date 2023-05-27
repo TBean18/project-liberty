@@ -1,22 +1,61 @@
 package com.liberty;
 
+import java.time.Instant;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.Set;
 
 import com.liberty.votes.Vote;
 
-import net.dv8tion.jda.api.entities.Message;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
-import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
-import net.dv8tion.jda.api.interactions.components.buttons.Button;
-import net.dv8tion.jda.api.requests.restaction.interactions.ReplyCallbackAction;
-import net.dv8tion.jda.api.utils.messages.MessageCreateData;
 
-public class VoteExecutor extends ListenerAdapter {
+@Slf4j
+public class VoteExecutor {
+
+    public static class Cleaner implements Runnable {
+
+        @Override
+        public void run() {
+            Set<Entry<Long, Vote>> entrySet = ongoingVoteSet.entrySet();
+            while (true) {
+                Instant instant = Instant.now().minusSeconds(300);
+                int numCleaned = 0;
+                for (Entry<Long, Vote> e : entrySet) {
+
+                    if (e.getValue().getMessage().getTimeCreated().toInstant().isBefore(instant)) {
+                        e.getValue().cleanUp();
+                        ongoingVoteSet.remove(e.getKey());
+                        numCleaned++;
+                    }
+                }
+                log.info("Cleaner process cleaned {} votes | {} remaining", numCleaned, ongoingVoteSet.size());
+
+                try {
+                    Thread.sleep(60000);
+                } catch (InterruptedException e1) {
+                    log.error("Cleaner Thread unable to sleep", e1);
+                    e1.printStackTrace();
+                }
+
+            }
+        }
+
+    }
+
+    static final Thread cleanerThread = new Thread(new VoteExecutor.Cleaner(), "CleanerThread");
+
     // Ongoing Votes
-    static final HashMap<Long, Vote> ongoingVoteSet = new HashMap<>();
+    @Getter
+    /**
+     * MessageId to Vote mapping
+     */
+    static final ConcurrentHashMap<Long, Vote> ongoingVoteSet = new ConcurrentHashMap<>();
 
     TextChannel getChannelForVoteCreation(Vote vote) {
 
@@ -28,20 +67,6 @@ public class VoteExecutor extends ListenerAdapter {
         }
 
         throw new ArrayIndexOutOfBoundsException("No text channel available for Vote Creation");
-
-    }
-
-    public boolean createVoteMessage(Vote vote) {
-        TextChannel voteChannel = getChannelForVoteCreation(vote);
-
-        // Construct the message
-        Message voteMessage = voteChannel.sendMessage(vote.toString()).addActionRow(
-                Button.primary("yes", "Vote in Favor"),
-                Button.secondary("no", "Vote against")).complete();
-
-        VoteExecutor.ongoingVoteSet.put(voteMessage.getIdLong(), vote);
-
-        return true;
 
     }
 

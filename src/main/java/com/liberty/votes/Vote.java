@@ -2,6 +2,8 @@ package com.liberty.votes;
 
 import java.util.HashSet;
 
+import com.liberty.VoteExecutor;
+
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.entities.Guild;
@@ -14,9 +16,35 @@ import net.dv8tion.jda.api.events.interaction.command.GenericCommandInteractionE
 import net.dv8tion.jda.api.events.interaction.command.GenericContextInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.UserContextInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.interactions.InteractionHook;
+import net.dv8tion.jda.api.interactions.components.buttons.Button;
 
 @Slf4j
 public abstract class Vote {
+
+    public static abstract class Listener extends ListenerAdapter {
+
+        @Override
+        abstract public void onUserContextInteraction(UserContextInteractionEvent event);
+
+        @Override
+        /**
+         * ! Currently runs twice
+         */
+        public void onButtonInteraction(ButtonInteractionEvent event) {
+            Vote potentialVote = VoteExecutor.getOngoingVoteSet().get(event.getMessageIdLong());
+            if (potentialVote != null) {
+                log.info("Button Captured for {}", potentialVote);
+                potentialVote.registerVote(event);
+            }
+        }
+
+        public void replyWithVoteMesssage(UserContextInteractionEvent event) {
+
+        }
+    }
+
     public static final String VOTE_INFAVOR_COMPONENTID = "yes";
     public static final String VOTE_AGAINST_COMPONENTID = "no";
 
@@ -61,6 +89,18 @@ public abstract class Vote {
         this.message = message;
     }
 
+    protected void composeMessage(InteractionHook hook) {
+        hook.sendMessage(this.toString()).addActionRow(
+                Button.primary(Vote.VOTE_INFAVOR_COMPONENTID, "Vote in Favor"),
+                Button.secondary(Vote.VOTE_AGAINST_COMPONENTID, "Vote against"))
+                .queue((msg) -> {
+                    this.setMessage(msg);
+                    VoteExecutor.getOngoingVoteSet().put(msg.getIdLong(), this);
+                }, t -> {
+                    log.error("Error while composing message for vote mute", t);
+                });
+    }
+
     public Message getMessage() {
         return message;
     }
@@ -84,8 +124,12 @@ public abstract class Vote {
         return this.channel;
     }
 
-    public String toString() {
-        return "Generic Vote Text";
+    abstract public String toString();
+
+    protected String getVoteStatusString() {
+        String ret = String.format("Votes Required = %d\nVotes for = %d\nVotes Against = %d",
+                this.getVotesRequired(), this.votesInFavor.size(), this.votesAgainst.size());
+        return ret;
     }
 
     public boolean isValidRequest() {
@@ -149,7 +193,8 @@ public abstract class Vote {
     /**
      * Delete Message
      */
-    void cleanUp() {
+    public void cleanUp() {
+        VoteExecutor.getOngoingVoteSet().remove(message.getIdLong());
         message.reply("Vote Concluded").queue();
         message.delete().queue();
     }

@@ -1,5 +1,8 @@
 package com.liberty;
 
+import com.liberty.votes.VoteAFK;
+import com.liberty.votes.VoteMute;
+
 import io.github.cdimascio.dotenv.Dotenv;
 import io.github.cdimascio.dotenv.DotenvBuilder;
 import lombok.extern.slf4j.Slf4j;
@@ -21,13 +24,17 @@ public class App {
 
         JDA jda = JDABuilder.createDefault(token)
                 .enableIntents(GatewayIntent.GUILD_MEMBERS)
-                .addEventListeners(new VoteListener())
+                .addEventListeners(new VoteMute.Listener(),
+                        new VoteAFK.Listener())
                 .build();
 
         jda.updateCommands().addCommands(
                 Commands.slash("ping", "Calculates Ping of the bot"),
-                Commands.user(VoteListener.MUTE_COMMAND_STRING))
+                Commands.user(VoteMute.Listener.MUTE_COMMAND_STRING),
+                Commands.user(VoteAFK.Listener.AFK_COMMAND_STRING))
                 .complete();
+
+        VoteExecutor.cleanerThread.start();
 
     }
 }
