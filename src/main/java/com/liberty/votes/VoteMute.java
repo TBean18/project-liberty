@@ -2,11 +2,13 @@ package com.liberty.votes;
 
 import com.liberty.VoteExecutor;
 
+import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion;
 import net.dv8tion.jda.api.events.interaction.command.UserContextInteractionEvent;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 
+@Slf4j
 public class VoteMute extends Vote {
 
     public static class Listener extends Vote.Listener {
@@ -16,6 +18,7 @@ public class VoteMute extends Vote {
         @Override
         public void onUserContextInteraction(UserContextInteractionEvent event) {
             if (event.getName().equalsIgnoreCase(MUTE_COMMAND_STRING)) {
+                log.info("Toggle Mute Vote request received. eventID = {}", event.getId());
                 event.deferReply().queue();
                 VoteMute vm;
                 // Check if its Mute or unmute

@@ -6,7 +6,7 @@ import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel;
 import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion;
 import net.dv8tion.jda.api.events.interaction.command.UserContextInteractionEvent;
 
-public class VoteAFK extends Vote {
+public class VoteAFK extends TargetedVote {
 
     public static class Listener extends Vote.Listener {
 
@@ -26,18 +26,10 @@ public class VoteAFK extends Vote {
 
     }
 
-    @Getter
-    private Member target;
-
     private AudioChannel AFKChannel;
 
     VoteAFK(UserContextInteractionEvent e) {
         super(e);
-        target = e.getTargetMember();
-        if (target == null) {
-            throw new NullPointerException("VoteAFK requires a Target to AFK");
-        }
-
         // AFK can only happen in a VC
         if (e.getChannel().getType().isAudio()) {
             channel = (AudioChannelUnion) e.getChannel();
@@ -49,13 +41,13 @@ public class VoteAFK extends Vote {
     @Override
     protected void execute() {
         cleanUp();
-        guild.moveVoiceMember(target, AFKChannel).queue();
+        guild.moveVoiceMember(getTarget(), AFKChannel).queue();
     }
 
     @Override
     public String toString() {
         String ret = String.format("Vote to AFK: %s\n%s",
-                target.getNickname(), this.getVoteStatusString());
+                getTarget().getNickname(), this.getVoteStatusString());
         return ret;
     }
 

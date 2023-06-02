@@ -11,6 +11,8 @@ import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.Channel;
+import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
+import net.dv8tion.jda.api.entities.channel.middleman.StandardGuildChannel;
 import net.dv8tion.jda.api.events.Event;
 import net.dv8tion.jda.api.events.interaction.command.GenericCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.GenericContextInteractionEvent;
@@ -27,18 +29,6 @@ public abstract class Vote {
 
         @Override
         abstract public void onUserContextInteraction(UserContextInteractionEvent event);
-
-        @Override
-        /**
-         * ! Currently runs twice
-         */
-        public void onButtonInteraction(ButtonInteractionEvent event) {
-            Vote potentialVote = VoteExecutor.getOngoingVoteSet().get(event.getMessageIdLong());
-            if (potentialVote != null) {
-                log.info("Button Captured for {}", potentialVote);
-                potentialVote.registerVote(event);
-            }
-        }
 
         public void replyWithVoteMesssage(UserContextInteractionEvent event) {
 
@@ -76,7 +66,7 @@ public abstract class Vote {
      * Channel which contains the vote.
      */
     @NonNull
-    Channel channel;
+    StandardGuildChannel channel;
     Member author;
 
     /**
@@ -105,6 +95,9 @@ public abstract class Vote {
         return message;
     }
 
+    Vote() {
+    }
+
     Vote(GenericContextInteractionEvent e) {
         if (e.getGuild() == null)
             throw new NullPointerException("Votes must contain a guild");
@@ -116,7 +109,7 @@ public abstract class Vote {
 
         if (e.getChannel() == null)
             throw new NullPointerException("Channel should never be nullable");
-        this.channel = e.getChannel();
+        this.channel = (@NonNull StandardGuildChannel) e.getGuildChannel();
 
     }
 
@@ -126,7 +119,7 @@ public abstract class Vote {
 
     abstract public String toString();
 
-    protected String getVoteStatusString() {
+    public String getVoteStatusString() {
         String ret = String.format("Votes Required = %d\nVotes for = %d\nVotes Against = %d",
                 this.getVotesRequired(), this.votesInFavor.size(), this.votesAgainst.size());
         return ret;

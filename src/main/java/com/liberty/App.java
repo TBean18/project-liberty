@@ -17,24 +17,37 @@ import net.dv8tion.jda.api.requests.GatewayIntent;
  */
 @Slf4j
 public class App {
+
+    /**
+     * Singleton JDA instance
+     */
+    private static JDA jda = null;
+
     public static void main(String[] args) {
-        Dotenv dotenv = new DotenvBuilder().load();
-        String token = dotenv.get("DISCORD_TOKEN");
-        log.info(token);
 
-        JDA jda = JDABuilder.createDefault(token)
-                .enableIntents(GatewayIntent.GUILD_MEMBERS)
-                .addEventListeners(new VoteMute.Listener(),
-                        new VoteAFK.Listener())
-                .build();
-
-        jda.updateCommands().addCommands(
-                Commands.slash("ping", "Calculates Ping of the bot"),
-                Commands.user(VoteMute.Listener.MUTE_COMMAND_STRING),
-                Commands.user(VoteAFK.Listener.AFK_COMMAND_STRING))
-                .complete();
-
+        jda = getJda();
         VoteExecutor.cleanerThread.start();
+
+    }
+
+    public static JDA getJda() {
+        if (jda == null) {
+            Dotenv dotenv = new DotenvBuilder().load();
+            String token = dotenv.get("DISCORD_TOKEN");
+            log.info("Creating JDA instance with token: {}", token);
+            jda = JDABuilder.createDefault(token)
+                    .enableIntents(GatewayIntent.GUILD_MEMBERS)
+                    .addEventListeners(new VoteMute.Listener(),
+                            new VoteAFK.Listener(), new VoteTallier())
+                    .build();
+
+            jda.updateCommands().addCommands(
+                    Commands.slash("ping", "Calculates Ping of the bot"),
+                    Commands.user(VoteMute.Listener.MUTE_COMMAND_STRING),
+                    Commands.user(VoteAFK.Listener.AFK_COMMAND_STRING))
+                    .complete();
+        }
+        return jda;
 
     }
 }
